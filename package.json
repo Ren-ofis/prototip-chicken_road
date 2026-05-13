@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -17,5 +19,11 @@
   "bugs": {
     "url": "https://github.com/Ren-ofis/prototip-chicken_road/issues"
   },
-  "homepage": "https://github.com/Ren-ofis/prototip-chicken_road#readme"
+  "homepage": "https://github.com/Ren-ofis/prototip-chicken_road#readme",
+  "dependencies": {
+    "phaser": "^4.1.0"
+  },
+  "devDependencies": {
+    "vite": "^8.0.12"
+  }
 }
