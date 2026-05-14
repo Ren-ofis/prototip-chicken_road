@@ -19,10 +19,16 @@ var config = {
           debug: true   
       }
     },
+    plugins: {
+        scene: [{
+            key: 'rexUI',
+            plugin: window.rexUI,
+            mapping: 'rexUI'
+        }]
+    },
     backgroundColor: '#9a9a9a'
   };
 var game = new Phaser.Game(config);
 game.scene.add("Preload", Preload);
 game.scene.add("Main", Main);
 game.scene.start("Preload");
-
