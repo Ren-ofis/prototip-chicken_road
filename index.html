@@ -1,27 +1,551 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chicken Road</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      background: #000;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      overflow: hidden;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chicken Crossing Gamble</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #333;
+        }
+
+        .container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+
+        #gameCanvas {
+            border: 3px solid #fff;
+            background: #90EE90;
+            display: block;
+        }
+
+        .ui-panel {
+            background: #222;
+            padding: 20px;
+            border-radius: 8px;
+            color: #fff;
+            width: 250px;
+        }
+
+        .ui-panel h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .section {
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #333;
+            border-radius: 4px;
+        }
+
+        .section label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .section input {
+            width: 100%;
+            padding: 8px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-start {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-start:hover:not(:disabled) {
+            background: #45a049;
+        }
+
+        .btn-start:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        .btn-cashout {
+            background: #FF9800;
+            color: white;
+        }
+
+        .btn-cashout:hover:not(:disabled) {
+            background: #e68900;
+        }
+
+        .btn-cashout:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        .stats {
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #bbb;
+        }
+
+        .stat-value {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .stat-value.danger {
+            color: #FF6B6B;
+        }
+
+        .game-over-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .game-over-modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #222;
+            padding: 40px;
+            border-radius: 8px;
+            text-align: center;
+            color: #fff;
+            border: 3px solid #ff9800;
+        }
+
+        .modal-content h2 {
+            font-size: 32px;
+            margin-bottom: 20px;
+        }
+
+        .modal-content .result {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #4CAF50;
+        }
+
+        .modal-content .result.loss {
+            color: #FF6B6B;
+        }
+
+        .modal-content button {
+            width: 200px;
+        }
+
+        .controls-info {
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #bbb;
+            line-height: 1.6;
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.88.2/phaser.min.js"></script>
-  <script type="module" src="/src/phaserMain.js"></script>
+    <div class="container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+        <div class="ui-panel">
+            <h1>🐔 GAMBLE</h1>
+
+            <div class="section">
+                <label>Bet Amount:</label>
+                <input type="number" id="betInput" value="100" min="10" max="10000" step="10">
+            </div>
+
+            <button class="btn-start" id="startBtn">START GAME</button>
+            <button class="btn-cashout" id="cashoutBtn" disabled>CASH OUT</button>
+
+            <div class="stats">
+                <div class="stat-row">
+                    <span class="stat-label">Status:</span>
+                    <span class="stat-value" id="statusText">Ready</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Bet:</span>
+                    <span class="stat-value" id="betText">-</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Lanes Crossed:</span>
+                    <span class="stat-value" id="lanesText">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Multiplier:</span>
+                    <span class="stat-value" id="multiplierText">1.0x</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Potential Win:</span>
+                    <span class="stat-value" id="winningText">-</span>
+                </div>
+            </div>
+
+            <div class="controls-info">
+                <strong>Controls:</strong><br>
+                ⬆️ Arrow Up: Move Forward<br>
+                ⬅️ Arrow Left: Move Left<br>
+                ➡️ Arrow Right: Move Right<br>
+                <br>
+                🎮 Reach the top to cross a lane!
+            </div>
+        </div>
+    </div>
+
+    <div class="game-over-modal" id="gameOverModal">
+        <div class="modal-content">
+            <h2 id="gameOverTitle">Game Over!</h2>
+            <div class="result" id="gameOverResult">You Lost!</div>
+            <button class="btn-start" onclick="location.reload()">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game constants
+        const LANES = 5;
+        const LANE_HEIGHT = canvas.height / (LANES + 1);
+        const GAME_WIDTH = canvas.width;
+        const GAME_HEIGHT = canvas.height;
+
+        // Multipliers per lane
+        const MULTIPLIERS = [1.2, 1.5, 2.0, 3.0, 5.0];
+
+        // Game state
+        const gameState = {
+            isRunning: false,
+            bet: 0,
+            lanesCrossed: 0,
+            currentMultiplier: 1.0,
+            gameOver: false,
+            won: false,
+        };
+
+        // Chicken object
+        const chicken = {
+            x: GAME_WIDTH / 2,
+            y: GAME_HEIGHT - LANE_HEIGHT / 2,
+            width: 30,
+            height: 30,
+            speed: 5,
+            laneIndex: LANES, // Start at bottom lane
+        };
+
+        // Cars array
+        let cars = [];
+
+        // UI elements
+        const startBtn = document.getElementById('startBtn');
+        const cashoutBtn = document.getElementById('cashoutBtn');
+        const betInput = document.getElementById('betInput');
+        const statusText = document.getElementById('statusText');
+        const betText = document.getElementById('betText');
+        const lanesText = document.getElementById('lanesText');
+        const multiplierText = document.getElementById('multiplierText');
+        const winningText = document.getElementById('winningText');
+        const gameOverModal = document.getElementById('gameOverModal');
+        const gameOverTitle = document.getElementById('gameOverTitle');
+        const gameOverResult = document.getElementById('gameOverResult');
+
+        // Event listeners
+        startBtn.addEventListener('click', startGame);
+        cashoutBtn.addEventListener('click', cashOut);
+        document.addEventListener('keydown', handleKeyPress);
+
+        function startGame() {
+            const bet = parseFloat(betInput.value);
+            if (isNaN(bet) || bet <= 0) {
+                alert('Please enter a valid bet amount');
+                return;
+            }
+
+            gameState.isRunning = true;
+            gameState.bet = bet;
+            gameState.lanesCrossed = 0;
+            gameState.currentMultiplier = 1.0;
+            gameState.gameOver = false;
+            gameState.won = false;
+
+            chicken.x = GAME_WIDTH / 2;
+            chicken.y = GAME_HEIGHT - LANE_HEIGHT / 2;
+            chicken.laneIndex = LANES;
+
+            cars = [];
+            spawnInitialCars();
+
+            startBtn.disabled = true;
+            betInput.disabled = true;
+            cashoutBtn.disabled = false;
+
+            statusText.textContent = 'Playing...';
+            updateUI();
+
+            gameLoop();
+        }
+
+        function cashOut() {
+            if (!gameState.isRunning) return;
+
+            gameState.isRunning = false;
+            gameState.won = true;
+            const winnings = Math.floor(gameState.bet * gameState.currentMultiplier);
+
+            showGameOverScreen(true, winnings);
+        }
+
+        function handleKeyPress(e) {
+            if (!gameState.isRunning || gameState.gameOver) return;
+
+            switch (e.key.toLowerCase()) {
+                case 'arrowup':
+                case 'w':
+                    moveChickenForward();
+                    e.preventDefault();
+                    break;
+                case 'arrowleft':
+                case 'a':
+                    moveChickenLeft();
+                    e.preventDefault();
+                    break;
+                case 'arrowright':
+                case 'd':
+                    moveChickenRight();
+                    e.preventDefault();
+                    break;
+            }
+        }
+
+        function moveChickenForward() {
+            if (chicken.laneIndex > 0) {
+                chicken.laneIndex--;
+                chicken.y = GAME_HEIGHT - (chicken.laneIndex + 0.5) * LANE_HEIGHT;
+
+                // Check if crossed a lane
+                if (chicken.laneIndex < LANES - gameState.lanesCrossed) {
+                    gameState.lanesCrossed++;
+                    if (gameState.lanesCrossed <= MULTIPLIERS.length) {
+                        gameState.currentMultiplier = MULTIPLIERS[gameState.lanesCrossed - 1];
+                    }
+                    spawnCarsForLane();
+                }
+            }
+        }
+
+        function moveChickenLeft() {
+            chicken.x = Math.max(chicken.width / 2, chicken.x - chicken.speed * 5);
+        }
+
+        function moveChickenRight() {
+            chicken.x = Math.min(GAME_WIDTH - chicken.width / 2, chicken.x + chicken.speed * 5);
+        }
+
+        function spawnInitialCars() {
+            for (let i = 0; i < LANES; i++) {
+                spawnCarInLane(i);
+            }
+        }
+
+        function spawnCarsForLane() {
+            if (gameState.lanesCrossed > 0) {
+                spawnCarInLane(LANES - gameState.lanesCrossed);
+            }
+        }
+
+        function spawnCarInLane(laneIndex) {
+            if (laneIndex < 0 || laneIndex >= LANES) return;
+
+            const direction = Math.random() > 0.5 ? 1 : -1;
+            const car = {
+                x: direction > 0 ? -50 : GAME_WIDTH + 50,
+                y: GAME_HEIGHT - (laneIndex + 0.5) * LANE_HEIGHT,
+                width: 50,
+                height: 25,
+                speed: 3 + Math.random() * 2,
+                direction: direction,
+                laneIndex: laneIndex,
+            };
+            cars.push(car);
+        }
+
+        function updateCars() {
+            cars = cars.filter(car => {
+                car.x += car.speed * car.direction;
+                return car.x > -100 && car.x < GAME_WIDTH + 100;
+            });
+
+            // Spawn new cars randomly
+            if (Math.random() < 0.02) {
+                const randomLane = Math.floor(Math.random() * (gameState.lanesCrossed + 1));
+                spawnCarInLane(randomLane);
+            }
+        }
+
+        function checkCollisions() {
+            for (let car of cars) {
+                if (
+                    chicken.x < car.x + car.width &&
+                    chicken.x + chicken.width > car.x &&
+                    chicken.y < car.y + car.height &&
+                    chicken.y + chicken.height > car.y
+                ) {
+                    return true; // Collision detected
+                }
+            }
+            return false;
+        }
+
+        function endGame(won) {
+            gameState.isRunning = false;
+            gameState.gameOver = true;
+            gameState.won = won;
+
+            if (!won) {
+                showGameOverScreen(false, 0);
+            }
+        }
+
+        function showGameOverScreen(won, winnings) {
+            gameOverTitle.textContent = won ? '🎉 YOU WON!' : '💥 GAME OVER!';
+            gameOverResult.textContent = won
+                ? `You cashed out!\n\nWinnings: $${winnings}`
+                : `You got hit!\n\nYou lost $${gameState.bet}`;
+            gameOverResult.classList.toggle('loss', !won);
+
+            gameOverModal.classList.add('active');
+
+            startBtn.disabled = false;
+            betInput.disabled = false;
+            cashoutBtn.disabled = true;
+            statusText.textContent = won ? 'Won!' : 'Lost!';
+        }
+
+        function updateUI() {
+            betText.textContent = `$${gameState.bet}`;
+            lanesText.textContent = gameState.lanesCrossed;
+            multiplierText.textContent = gameState.currentMultiplier.toFixed(1) + 'x';
+            const winnings = Math.floor(gameState.bet * gameState.currentMultiplier);
+            winningText.textContent = `$${winnings}`;
+        }
+
+        function drawGame() {
+            // Clear canvas
+            ctx.fillStyle = '#90EE90';
+            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+            // Draw lane lines
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            for (let i = 1; i < LANES; i++) {
+                const y = GAME_HEIGHT - (i + 1) * LANE_HEIGHT;
+                ctx.setLineDash([10, 10]);
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(GAME_WIDTH, y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Draw safe zone at top
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(0, 0, GAME_WIDTH, LANE_HEIGHT);
+            ctx.fillStyle = '#333';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('SAFE ZONE', GAME_WIDTH / 2, LANE_HEIGHT / 2 + 6);
+
+            // Draw chicken
+            ctx.fillStyle = '#FF6B00';
+            ctx.beginPath();
+            ctx.arc(chicken.x, chicken.y, chicken.width / 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(chicken.x - 8, chicken.y - 8, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw cars
+            cars.forEach(car => {
+                ctx.fillStyle = '#FF4444';
+                ctx.fillRect(car.x - car.width / 2, car.y - car.height / 2, car.width, car.height);
+                ctx.fillStyle = '#333';
+                ctx.fillRect(car.x - car.width / 2 + 5, car.y - car.height / 2 + 3, 8, 8);
+                ctx.fillRect(car.x - car.width / 2 + 25, car.y - car.height / 2 + 3, 8, 8);
+            });
+
+            // Draw HUD
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 18px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText(`Lanes: ${gameState.lanesCrossed}`, 10, 30);
+            ctx.fillText(`Multiplier: ${gameState.currentMultiplier.toFixed(1)}x`, 10, 55);
+        }
+
+        function gameLoop() {
+            updateCars();
+
+            if (checkCollisions()) {
+                endGame(false);
+                drawGame();
+                return;
+            }
+
+            drawGame();
+
+            updateUI();
+
+            if (gameState.isRunning && !gameState.gameOver) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+    </script>
 </body>
 </html>
