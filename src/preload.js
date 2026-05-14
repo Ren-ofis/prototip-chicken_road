@@ -1,4 +1,4 @@
-import { AssetGenerator } from "./AssetGenerator.js";
+import { AssetGenerator } from "./scenes/AssetGenerator.js";
 
 export default class Preload extends Phaser.Scene {
   constructor() { super("Preload"); }
