@@ -4,6 +4,8 @@ export default class Preload extends Phaser.Scene {
     this.load.image("chicken", "assets/chicken.png");
     this.load.image("manhole", "assets/manhole_cover.png");
     this.load.image("roadBarrier", "assets/roadBarrier.png");
+    this.load.image("create", "assets/create.png");
+
   }
   create() { this.scene.start("Main"); }
 }
