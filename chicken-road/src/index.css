@@ -5,9 +5,6 @@
 }
 
 @layer utilities {
-  .voxel-shadow {
-    filter: drop-shadow(6px 6px 0px rgba(0,0,0,0.4));
-  }
 
   .road-stripe {
     background: repeating-linear-gradient(90deg, #1A1A1A, #1A1A1A 40px, #222222 40px, #222222 80px);

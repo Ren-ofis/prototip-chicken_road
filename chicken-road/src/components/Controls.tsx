@@ -34,7 +34,7 @@ export default function Controls({
              <button 
               onClick={() => setBet(Math.max(1, bet - 10))}
               className="px-4 py-2 flex items-center justify-center rounded-xl hover:bg-white/10 text-[10px] uppercase font-black text-white/40 hover:text-white transition-colors whitespace-nowrap"
-             >bet less</button>
+             >Less</button>
              <input 
               type="number" 
               value={bet}
@@ -45,7 +45,7 @@ export default function Controls({
              <button 
               onClick={() => setBet(bet + 10)}
               className="px-4 py-2 flex items-center justify-center rounded-xl hover:bg-white/10 text-[10px] uppercase font-black text-white/40 hover:text-white transition-colors whitespace-nowrap"
-             >bet more</button>
+             >More</button>
           </div>
         </div>
 

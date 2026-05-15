@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
-import { Car, Player } from '../types.ts';
-import { MULTIPLIERS } from '../constants.ts';
+import { Car, Player, Difficulty } from '../types.ts';
+import { getMultipliersByDifficulty } from '../constants.ts';
 
 interface GameBoardProps {
   player: Player;
@@ -8,9 +8,12 @@ interface GameBoardProps {
   isGameOver: boolean;
   lanes: number;
   barriers: Set<number>;
+  difficulty: Difficulty;
 }
 
-export default function GameBoard({ player, cars, isGameOver, lanes, barriers }: GameBoardProps) {
+export default function GameBoard({ player, cars, isGameOver, lanes, barriers, difficulty }: GameBoardProps) {
+  const multipliers = getMultipliersByDifficulty(difficulty);
+  
   return (
     <div className="relative w-full h-[600px] overflow-hidden bg-[#0A0A0A] select-none perspective-1000">
       {/* Background/Sidewalks */}
@@ -27,7 +30,7 @@ export default function GameBoard({ player, cars, isGameOver, lanes, barriers }:
 
       {/* Road Lanes */}
       <div className="absolute left-[12%] right-[8%] top-0 bottom-0 flex z-0 road-stripe">
-        {MULTIPLIERS.map((mult, i) => (
+        {multipliers.map((mult, i) => (
           <div 
             key={i} 
             className={`flex-1 border-r border-white/5 flex justify-center items-center relative ${

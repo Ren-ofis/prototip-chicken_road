@@ -3,7 +3,7 @@ import Header from './components/Header.tsx';
 import GameBoard from './components/GameBoard.tsx';
 import Controls from './components/Controls.tsx';
 import { Difficulty, GameStatus, Car, Player } from './types.ts';
-import { MULTIPLIERS, DIFFICULTY_CONFIG, LANES_COUNT } from './constants.ts';
+import { getMultipliersByDifficulty, DIFFICULTY_CONFIG, LANES_COUNT } from './constants.ts';
 
 export default function App() {
   const [balance, setBalance] = useState(1000000);
@@ -142,9 +142,10 @@ export default function App() {
     if (gameState !== GameStatus.PLAYING) return;
     if (player.lane < LANES_COUNT) {
       const nextLane = player.lane + 1;
+      const multipliers = getMultipliersByDifficulty(difficulty);
       setPlayer({
         lane: nextLane,
-        multiplier: MULTIPLIERS[nextLane - 1],
+        multiplier: multipliers[nextLane - 1],
       });
       setBarriers(prev => new Set(prev).add(nextLane));
       
@@ -176,10 +177,11 @@ export default function App() {
             isGameOver={isGameOver}
             lanes={LANES_COUNT}
             barriers={barriers}
+            difficulty={difficulty}
           />
 
           {/* Dynamic HUD in game */}
-          <div className="absolute top-8 left-12 flex flex-col pointer-events-none">
+          <div className="absolute top-8 left-12 flex flex-col pointer-events-none z-40">
             <span className="text-6xl font-black text-white leading-none glow-text tracking-tighter">
               {player.multiplier.toFixed(2)}
             </span>
