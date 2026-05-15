@@ -19,17 +19,38 @@ export default function App() {
   const lastTimeRef = useRef<number>(0);
   const carIdCounter = useRef(0);
   const spawnTimer = useRef(0);
+  const carsRef = useRef<Car[]>([]);
+  const playerRef = useRef<Player>({ lane: 0, multiplier: 1 });
+  const gameStateRef = useRef<GameStatus>(GameStatus.IDLE);
+  const pendingTimeoutRef = useRef<number | null>(null);
+  const pendingBarrierLaneRef = useRef<number | null>(null);
 
-  const spawnCar = useCallback((diff: Difficulty) => {
+  const spawnCar = useCallback((diff: Difficulty, currentCars: Car[]) => {
     const config = DIFFICULTY_CONFIG[diff];
-    const lane = Math.floor(Math.random() * LANES_COUNT) + 1;
+    
+    // Get occupied lanes
+    const occupiedLanes = new Set(currentCars.map(car => car.lane));
+    
+    // Find available lanes (exclude lanes where chicken is at or has passed)
+    const availableLanes = [];
+    for (let i = 1; i <= LANES_COUNT; i++) {
+      if (!occupiedLanes.has(i) && i > playerRef.current.lane) {
+        availableLanes.push(i);
+      }
+    }
+    
+    // If no available lanes, don't spawn
+    if (availableLanes.length === 0) return;
+    
+    // Pick random available lane
+    const lane = availableLanes[Math.floor(Math.random() * availableLanes.length)];
     const direction = 'down';
     
     const newCar: Car = {
       id: carIdCounter.current++,
       lane,
       y: -15,
-      speed: config.baseSpeed + Math.random() * 0.2, // Randomize speed slightly
+      speed: config.baseSpeed + Math.random() * 0.15,
       color: ['#FACC15', '#FFFFFF', '#3B82F6', '#EF4444', '#10B981'][Math.floor(Math.random() * 5)],
       direction,
       isExploded: false,
@@ -46,7 +67,7 @@ export default function App() {
       // Spawn cars
       spawnTimer.current += deltaTime / 1000;
       if (spawnTimer.current >= config.spawnRate) {
-        spawnCar(difficulty);
+        spawnCar(difficulty, carsRef.current);
         spawnTimer.current = 0;
       }
 
@@ -60,14 +81,21 @@ export default function App() {
             
             // Barrier collision check (Barrier visual is at ~32%)
             const BARRIER_Y = 15; // Stop slightly before the barrier
-            if (barriers.has(car.lane) && car.y < BARRIER_Y && nextY >= BARRIER_Y) {
-               // Higher threshold (0.5) so Medium (0.4) is generally safe
-               if (car.speed > 0.5) {
-                 handleGameOver();
-                 return { ...car, y: BARRIER_Y + 2, isExploded: true };
-               } else {
-                 return { ...car, y: BARRIER_Y, speed: 0 };
-               }
+            if (barriers.has(car.lane)) {
+              // Check if car is passing through the barrier
+              if (car.y < BARRIER_Y && nextY >= BARRIER_Y) {
+                // Car is hitting the barrier right now
+                if (car.speed > 0.5) {
+                  handleGameOver();
+                  return { ...car, y: BARRIER_Y + 2, isExploded: true };
+                } else {
+                  return { ...car, y: BARRIER_Y, speed: 0 };
+                }
+              } else if (car.y >= BARRIER_Y) {
+                // Car already passed the barrier - it went through! Wreck the chicken
+                handleGameOver();
+                return { ...car, isExploded: true };
+              }
             }
 
             return {
@@ -104,7 +132,28 @@ export default function App() {
     };
   }, [update]);
 
+  useEffect(() => {
+    carsRef.current = cars;
+  }, [cars]);
+
+  useEffect(() => {
+    playerRef.current = player;
+  }, [player]);
+
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+
   const handleGameOver = () => {
+    // Cancel any pending cashout
+    if (pendingTimeoutRef.current !== null) {
+      clearTimeout(pendingTimeoutRef.current);
+      pendingTimeoutRef.current = null;
+    }
+    
+    // Clear pending barrier
+    pendingBarrierLaneRef.current = null;
+    
     setGameState(GameStatus.GAMEOVER);
     setIsGameOver(true);
     // Don't modify balance since they already paid the bet
@@ -125,10 +174,21 @@ export default function App() {
     setBarriers(new Set());
     setCars([]); // Clear cars for new round
     setIsGameOver(false);
+    pendingBarrierLaneRef.current = null; // Reset pending barrier
   };
 
   const onCashout = () => {
     if (gameState !== GameStatus.PLAYING) return;
+    
+    // Cancel any pending auto-cashout
+    if (pendingTimeoutRef.current !== null) {
+      clearTimeout(pendingTimeoutRef.current);
+      pendingTimeoutRef.current = null;
+    }
+    
+    // Clear pending barrier
+    pendingBarrierLaneRef.current = null;
+    
     const winAmount = Math.floor(bet * player.multiplier);
     setBalance(balance + winAmount);
     setGameState(GameStatus.WON);
@@ -140,6 +200,9 @@ export default function App() {
 
   const handleMove = () => {
     if (gameState !== GameStatus.PLAYING) return;
+    // Prevent moving until the barrier from the previous move is placed
+    if (pendingBarrierLaneRef.current !== null) return;
+    
     if (player.lane < LANES_COUNT) {
       const nextLane = player.lane + 1;
       const multipliers = getMultipliersByDifficulty(difficulty);
@@ -147,12 +210,30 @@ export default function App() {
         lane: nextLane,
         multiplier: multipliers[nextLane - 1],
       });
-      setBarriers(prev => new Set(prev).add(nextLane));
+      
+      // Mark this lane as having a pending barrier
+      pendingBarrierLaneRef.current = nextLane;
+      
+      // Delay barrier placement by 500ms to allow cars to hit the chicken
+      setTimeout(() => {
+        setBarriers(prev => new Set(prev).add(nextLane));
+        pendingBarrierLaneRef.current = null;
+      }, 500);
       
       if (nextLane === LANES_COUNT) {
-        // Automatically cashout if reached the end
-        setTimeout(() => {
-          onCashout();
+        // Automatically cashout if reached the end (with guard to prevent double-trigger)
+        const winAmount = Math.floor(bet * multipliers[nextLane - 1]);
+        pendingTimeoutRef.current = window.setTimeout(() => {
+          // Only cashout if still playing (collision might have ended the game)
+          if (gameStateRef.current === GameStatus.PLAYING) {
+            setBalance(prevBalance => prevBalance + winAmount);
+            setGameState(GameStatus.WON);
+            setTimeout(() => {
+              setGameState(GameStatus.IDLE);
+              setPlayer({ lane: 0, multiplier: 1 });
+            }, 1000);
+          }
+          pendingTimeoutRef.current = null;
         }, 500);
       }
     }

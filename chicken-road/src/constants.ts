@@ -24,26 +24,24 @@ export function getMultipliersByDifficulty(difficulty: Difficulty): number[] {
 export const MULTIPLIERS = BASE_MULTIPLIERS;
 
 export const DIFFICULTY_CONFIG = {
-   // lower is more frequent
-
   [Difficulty.EASY]: {
-    spawnRate: 1.5,
-    baseSpeed: 0.2,
+    spawnRate: 0.8,
+    baseSpeed: 0.35,
     carDensity: 2,
   },
   [Difficulty.MEDIUM]: {
-    spawnRate: 1.0,
-    baseSpeed: 0.3,
+    spawnRate: 0.5,
+    baseSpeed: 0.55,
     carDensity: 3,
   },
   [Difficulty.HARD]: {
-    spawnRate: 0.5,
-    baseSpeed: 0.4,
+    spawnRate: 0.3,
+    baseSpeed: 0.85,
     carDensity: 4,
   },
   [Difficulty.HARDCORE]: {
-    spawnRate: 0.3,
-    baseSpeed: 0.9,
+    spawnRate: 0.15,
+    baseSpeed: 1.3,
     carDensity: 5,
   },
 };

@@ -33,18 +33,20 @@ export default function Controls({
           <div className="flex items-center gap-4 bg-white/5 p-2 rounded-2xl border border-white/5">
              <button 
               onClick={() => setBet(Math.max(1, bet - 10))}
-              className="px-4 py-2 flex items-center justify-center rounded-xl hover:bg-white/10 text-[10px] uppercase font-black text-white/40 hover:text-white transition-colors whitespace-nowrap"
+              disabled={isPlaying}
+              className="px-4 py-2 flex items-center justify-center rounded-xl hover:bg-white/10 text-[10px] uppercase font-black text-white/40 hover:text-white transition-colors whitespace-nowrap disabled:hover:bg-transparent disabled:opacity-50 disabled:cursor-not-allowed"
              >Less</button>
              <input 
               type="number" 
               value={bet}
               onChange={(e) => setBet(Number(e.target.value))}
               disabled={isPlaying}
-              className="w-20 text-center bg-transparent text-white font-black text-xl outline-none glow-text px-2"
+              className="w-20 text-center bg-transparent text-white font-black text-xl outline-none glow-text px-2 disabled:opacity-50 disabled:cursor-not-allowed"
              />
              <button 
               onClick={() => setBet(bet + 10)}
-              className="px-4 py-2 flex items-center justify-center rounded-xl hover:bg-white/10 text-[10px] uppercase font-black text-white/40 hover:text-white transition-colors whitespace-nowrap"
+              disabled={isPlaying}
+              className="px-4 py-2 flex items-center justify-center rounded-xl hover:bg-white/10 text-[10px] uppercase font-black text-white/40 hover:text-white transition-colors whitespace-nowrap disabled:hover:bg-transparent disabled:opacity-50 disabled:cursor-not-allowed"
              >More</button>
           </div>
         </div>
@@ -66,10 +68,10 @@ export default function Controls({
                 key={d}
                 onClick={() => setDifficulty(d)}
                 disabled={isPlaying}
-                className={`flex flex-col items-center py-2 px-1 rounded-xl transition-all border ${
+                className={`flex flex-col items-center py-2 px-1 rounded-xl transition-all border disabled:cursor-not-allowed disabled:opacity-50 ${
                   difficulty === d 
-                    ? 'bg-white/10 border-white/20 text-white shadow-inner' 
-                    : 'border-transparent text-white/20 hover:text-white/40'
+                    ? 'bg-white/10 border-white/20 text-white shadow-inner disabled:shadow-none' 
+                    : 'border-transparent text-white/20 hover:text-white/40 disabled:hover:text-white/20'
                 }`}
               >
                 <span className="text-[10px] font-black uppercase tracking-tighter">{d}</span>
@@ -83,7 +85,8 @@ export default function Controls({
         {isPlaying ? (
           <button 
             onClick={onCashout}
-            className="w-full md:w-64 h-20 bg-yellow-400 hover:bg-yellow-300 text-black font-black text-2xl rounded-2xl transition-all active:scale-95 flex flex-col items-center justify-center shadow-[0_0_30px_rgba(250,204,21,0.3)] voxel-shadow group"
+            disabled={!isPlaying}
+            className="w-full md:w-64 h-20 bg-yellow-400 hover:bg-yellow-300 disabled:bg-yellow-400/50 disabled:cursor-not-allowed text-black font-black text-2xl rounded-2xl transition-all active:scale-95 flex flex-col items-center justify-center shadow-[0_0_30px_rgba(250,204,21,0.3)] voxel-shadow group disabled:shadow-none"
           >
             <span className="tracking-tighter">CASHOUT</span>
             <span className="text-sm opacity-50 font-mono tracking-normal">{(bet * currentMultiplier).toFixed(2)}$</span>
@@ -91,7 +94,8 @@ export default function Controls({
         ) : (
           <button 
             onClick={onPlay}
-            className="w-full md:w-64 h-20 bg-[#38D361] hover:bg-[#45E872] text-black font-black text-2xl rounded-2xl transition-all active:scale-95 shadow-[0_0_30px_rgba(56,211,97,0.3)] voxel-shadow tracking-tighter"
+            disabled={isPlaying}
+            className="w-full md:w-64 h-20 bg-[#38D361] hover:bg-[#45E872] disabled:bg-[#38D361]/50 disabled:cursor-not-allowed text-black font-black text-2xl rounded-2xl transition-all active:scale-95 shadow-[0_0_30px_rgba(56,211,97,0.3)] voxel-shadow tracking-tighter disabled:shadow-none"
           >
             PLAY ROUND
           </button>
