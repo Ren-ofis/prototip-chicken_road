@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Difficulty } from '../types.ts';
 import { SessionStats, TARGET_RTP, actualRTP, crashLaneDistribution } from '../rtp.ts';
 import { getMultipliersByDifficulty } from '../constants.ts';
@@ -11,6 +12,14 @@ interface RTPPanelProps {
 }
 
 export default function RTPPanel({ stats, difficulty, currentBet, onReset, onSimulate }: RTPPanelProps) {
+  const [customRounds, setCustomRounds] = useState('');
+  const parsedCustom = parseInt(customRounds, 10);
+  const customValid = Number.isFinite(parsedCustom) && parsedCustom >= 1 && parsedCustom <= 10_000_000;
+  const runCustom = () => {
+    if (!customValid) return;
+    onSimulate(parsedCustom);
+  };
+
   const actual = actualRTP(stats);
   const deltaPct = stats.roundsPlayed > 0 ? (actual - TARGET_RTP) * 100 : 0;
   const multipliers = getMultipliersByDifficulty(difficulty);
@@ -112,6 +121,29 @@ export default function RTPPanel({ stats, difficulty, currentBet, onReset, onSim
               {n >= 1000 ? `${n / 1000}k` : n}
             </button>
           ))}
+        </div>
+
+        <div className="flex gap-2 mt-2">
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={10000000}
+            value={customRounds}
+            onChange={(e) => setCustomRounds(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') runCustom();
+            }}
+            placeholder="Custom rounds"
+            className="flex-1 min-w-0 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[11px] font-mono font-black text-white placeholder:text-white/30 outline-none focus:border-white/30"
+          />
+          <button
+            onClick={runCustom}
+            disabled={!customValid}
+            className="px-4 py-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/40 border border-emerald-500/40 disabled:opacity-30 disabled:hover:bg-emerald-500/20 text-[10px] uppercase tracking-wider font-black text-emerald-200 transition-colors"
+          >
+            Run
+          </button>
         </div>
       </div>
     </div>
