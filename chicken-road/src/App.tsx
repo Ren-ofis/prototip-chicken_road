@@ -40,7 +40,6 @@ export default function App() {
   const [moveDelay, setMoveDelay] = useState(0);
   const [scrollX, setScrollX] = useState(0);
   const [scrollAnimated, setScrollAnimated] = useState(true);
-  const [isDying, setIsDying] = useState(false);
 
   const requestRef = useRef<number>(null);
   const lastTimeRef = useRef<number>(0);
@@ -226,7 +225,6 @@ export default function App() {
     }
 
     dyingRef.current = false;
-    setIsDying(false);
     advanceLockRef.current = false;
 
     setSessionStats((prev) => recordRound(prev, bet, 0, crashLaneRef.current));
@@ -251,7 +249,6 @@ export default function App() {
     setBalance(balance - bet);
     crashLaneRef.current = rollCrashLane(difficulty);
     dyingRef.current = false;
-    setIsDying(false);
     advanceLockRef.current = false;
     setGameState(GameStatus.PLAYING);
     setPlayer({ lane: 0, multiplier: 1 });
@@ -355,7 +352,6 @@ export default function App() {
         }
 
         dyingRef.current = true;
-        setIsDying(true);
         setTimeout(() => handleGameOver(), 500);
         return;
       }
@@ -526,7 +522,6 @@ export default function App() {
           onPlay={onPlay}
           onCashout={onCashout}
           gameState={gameState}
-          isDying={isDying}
           currentMultiplier={player.multiplier}
         />
       </main>

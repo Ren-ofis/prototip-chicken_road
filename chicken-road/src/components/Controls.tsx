@@ -18,7 +18,6 @@ interface ControlsProps {
   onPlay: () => void;
   onCashout: () => void;
   gameState: 'IDLE' | 'PLAYING' | 'GAMEOVER' | 'WON';
-  isDying: boolean;
   currentMultiplier: number;
 }
 
@@ -53,7 +52,6 @@ export default function Controls({
   onPlay,
   onCashout,
   gameState,
-  isDying,
   currentMultiplier,
 }: ControlsProps) {
   const isPlaying = gameState === 'PLAYING';
@@ -198,13 +196,10 @@ export default function Controls({
             </div>
           </div>
 
-          {/* Action button. Hidden during the brief death animation so the
-              cashout/play button doesn't flicker between PLAYING and GAMEOVER. */}
-          {isDying ? (
-            <div className="w-full md:w-64 h-20 flex items-center justify-center rounded-2xl bg-red-950/40 border border-red-900/50 text-red-400/70 text-sm font-black uppercase tracking-[0.3em]">
-              Wrecking…
-            </div>
-          ) : isPlaying ? (
+          {/* Action button. Cashout is shown normally during the brief death
+              window — the click silently no-ops via dyingRef so the loss
+              looks like a regular bad-luck collision, not a scripted state. */}
+          {isPlaying ? (
             <button
               onClick={onCashout}
               disabled={!isPlaying}
