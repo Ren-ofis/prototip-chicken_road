@@ -1,7 +1,13 @@
 import { Difficulty } from './types.ts';
 
-// Base multipliers for EASY difficulty
-const BASE_MULTIPLIERS = [1.01, 1.03, 1.10, 1.15, 1.19, 1.24, 1.45, 1.80, 2.50, 5.00];
+// Base multipliers for EASY difficulty. Strictly increasing so the RTP math
+// (P(reach lane N) = TARGET_RTP / multiplier[N]) yields a valid decreasing
+// reach-probability sequence regardless of lane count.
+const BASE_MULTIPLIERS = [
+  1.01, 1.03, 1.10, 1.15, 1.19, 1.24, 1.45, 1.80, 2.50, 5.00,
+  6.00, 7.20, 8.60, 10.30, 12.40, 14.90, 17.90, 21.50, 25.80, 31.00,
+  37.20, 44.60, 53.50, 64.20, 77.00, 92.40, 110.90,
+];
 
 // Difficulty-based multiplier multipliers
 const DIFFICULTY_MULTIPLIER = {

@@ -20,6 +20,7 @@ export interface Car {
   color: string;
   direction: 'up' | 'down';
   isExploded?: boolean;
+  isKiller?: boolean;
 }
 
 export interface Player {

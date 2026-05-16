@@ -21,3 +21,11 @@ body {
   padding: 0;
   overflow: hidden;
 }
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
