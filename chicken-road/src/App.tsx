@@ -61,7 +61,7 @@ export default function App() {
 
   const update = useCallback((time: number) => {
     if (lastTimeRef.current !== undefined) {
-      const deltaTime = time - lastTimeRef.current;
+      const deltaTime = Math.min(time - lastTimeRef.current, 50);
       const config = DIFFICULTY_CONFIG[difficulty];
 
       // Spawn cars
@@ -77,7 +77,7 @@ export default function App() {
           .map((car) => {
             if (car.isExploded) return car;
             
-            let nextY = car.y + car.speed;
+            let nextY = car.y + car.speed * (deltaTime / 16.67);
             
             // Barrier collision check (Barrier visual is at ~32%)
             const BARRIER_Y = 15; // Stop slightly before the barrier
