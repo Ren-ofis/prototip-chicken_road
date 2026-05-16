@@ -4,7 +4,7 @@ import GameBoard from './components/GameBoard.tsx';
 import Controls from './components/Controls.tsx';
 import RTPPanel from './components/RTPPanel.tsx';
 import { Difficulty, GameStatus, Car, Player } from './types.ts';
-import { getMultipliersByDifficulty, DIFFICULTY_CONFIG, LANES_COUNT } from './constants.ts';
+import { getMultipliersByDifficulty, DIFFICULTY_CONFIG, getLanesCount, MAX_LANES } from './constants.ts';
 import { rollCrashLane, emptyStats, recordRound, mergeStats, simulateMixedStrategy, SessionStats } from './rtp.ts';
 
 const CAR_PALETTE = ['#FACC15', '#FFFFFF', '#3B82F6', '#EF4444', '#10B981'];
@@ -36,10 +36,11 @@ export default function App() {
   const [cars, setCars] = useState<Car[]>([]);
   const [isGameOver, setIsGameOver] = useState(false);
   const [barriers, setBarriers] = useState<Set<number>>(new Set());
-  const [sessionStats, setSessionStats] = useState<SessionStats>(() => emptyStats(LANES_COUNT));
+  const [sessionStats, setSessionStats] = useState<SessionStats>(() => emptyStats(MAX_LANES));
   const [moveDelay, setMoveDelay] = useState(0);
   const [scrollX, setScrollX] = useState(0);
   const [scrollAnimated, setScrollAnimated] = useState(true);
+  const [isDying, setIsDying] = useState(false);
 
   const requestRef = useRef<number>(null);
   const lastTimeRef = useRef<number>(0);
@@ -56,6 +57,9 @@ export default function App() {
   // Blocks further advances until the just-placed barrier is visually finished
   // appearing. Prevents spam-clicking through lanes.
   const advanceLockRef = useRef<boolean>(false);
+  // Tracks the pending IDLE-reset timeout after a round ends (win or loss).
+  // Cancelled on onPlay so a new round doesn't get clobbered by a stale reset.
+  const roundEndTimeoutRef = useRef<number | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const dragStartXRef = useRef(0);
@@ -71,7 +75,7 @@ export default function App() {
     
     // Find available lanes (exclude lanes where chicken is at or has passed)
     const availableLanes = [];
-    for (let i = 1; i <= LANES_COUNT; i++) {
+    for (let i = 1; i <= getLanesCount(diff); i++) {
       if (!occupiedLanes.has(i) && i > playerRef.current.lane) {
         availableLanes.push(i);
       }
@@ -194,41 +198,60 @@ export default function App() {
 
   useEffect(() => {
     if (isDraggingRef.current) return;
-    const { min, max } = scrollBounds(LANES_COUNT);
+    const { min, max } = scrollBounds(getLanesCount(difficulty));
     const focusLane = player.lane === 0 ? 1 : player.lane;
     setScrollAnimated(true);
     setScrollX(clamp(50 - laneCenterPct(focusLane), min, max));
-  }, [player.lane]);
+  }, [player.lane, difficulty]);
+
+  // Returns the game to a fully clean IDLE state after the win/loss overlay.
+  // Used by both cashout and wreck flows so the player never sees stale cars
+  // or barriers carrying over into the next ready-to-play state.
+  const scheduleRoundEnd = (delayMs: number) => {
+    if (roundEndTimeoutRef.current !== null) clearTimeout(roundEndTimeoutRef.current);
+    roundEndTimeoutRef.current = window.setTimeout(() => {
+      setGameState(GameStatus.IDLE);
+      setIsGameOver(false);
+      setPlayer({ lane: 0, multiplier: 1 });
+      setCars([]);
+      setBarriers(new Set());
+      roundEndTimeoutRef.current = null;
+    }, delayMs);
+  };
 
   const handleGameOver = () => {
-    // Cancel any pending cashout
     if (pendingTimeoutRef.current !== null) {
       clearTimeout(pendingTimeoutRef.current);
       pendingTimeoutRef.current = null;
     }
 
     dyingRef.current = false;
+    setIsDying(false);
     advanceLockRef.current = false;
 
     setSessionStats((prev) => recordRound(prev, bet, 0, crashLaneRef.current));
 
     setGameState(GameStatus.GAMEOVER);
     setIsGameOver(true);
-    // Don't modify balance since they already paid the bet
-    setTimeout(() => {
-      setGameState(GameStatus.IDLE);
-      setIsGameOver(false);
-      setPlayer({ lane: 0, multiplier: 1 });
-      setCars([]); // Clear cars on reset
-      setBarriers(new Set());
-    }, 2000);
+    scheduleRoundEnd(2000);
   };
 
   const onPlay = () => {
     if (balance < bet) return;
+    // Block starting a new round while the death animation is still playing.
+    if (dyingRef.current) return;
+
+    // Cancel any pending end-of-round cleanup so its setTimeout can't
+    // mid-round reset this fresh round to IDLE.
+    if (roundEndTimeoutRef.current !== null) {
+      clearTimeout(roundEndTimeoutRef.current);
+      roundEndTimeoutRef.current = null;
+    }
+
     setBalance(balance - bet);
     crashLaneRef.current = rollCrashLane(difficulty);
     dyingRef.current = false;
+    setIsDying(false);
     advanceLockRef.current = false;
     setGameState(GameStatus.PLAYING);
     setPlayer({ lane: 0, multiplier: 1 });
@@ -251,10 +274,7 @@ export default function App() {
     setSessionStats((prev) => recordRound(prev, bet, winAmount, null));
     setBalance(balance + winAmount);
     setGameState(GameStatus.WON);
-    setTimeout(() => {
-      setGameState(GameStatus.IDLE);
-      setPlayer({ lane: 0, multiplier: 1 });
-    }, 1000);
+    scheduleRoundEnd(1000);
   };
 
   const handleMove = () => {
@@ -264,7 +284,8 @@ export default function App() {
     // Block until the previous barrier has finished appearing.
     if (advanceLockRef.current) return;
 
-    if (player.lane < LANES_COUNT) {
+    const lanesCount = getLanesCount(difficulty);
+    if (player.lane < lanesCount) {
       const nextLane = player.lane + 1;
 
       const multipliers = getMultipliersByDifficulty(difficulty);
@@ -334,6 +355,7 @@ export default function App() {
         }
 
         dyingRef.current = true;
+        setIsDying(true);
         setTimeout(() => handleGameOver(), 500);
         return;
       }
@@ -351,7 +373,7 @@ export default function App() {
         advanceLockRef.current = false;
       }, (computedMoveDelay + 0.5) * 1000);
       
-      if (nextLane === LANES_COUNT) {
+      if (nextLane === lanesCount) {
         // Automatically cashout if reached the end (with guard to prevent double-trigger)
         const winAmount = Math.round(bet * multipliers[nextLane - 1] * 100) / 100;
         pendingTimeoutRef.current = window.setTimeout(() => {
@@ -360,16 +382,22 @@ export default function App() {
             setSessionStats((prev) => recordRound(prev, bet, winAmount, null));
             setBalance(prevBalance => prevBalance + winAmount);
             setGameState(GameStatus.WON);
-            setTimeout(() => {
-              setGameState(GameStatus.IDLE);
-              setPlayer({ lane: 0, multiplier: 1 });
-            }, 1000);
+            scheduleRoundEnd(1000);
           }
           pendingTimeoutRef.current = null;
         }, 500);
       }
     }
   };
+
+  // When a fresh round begins (gameState flips to PLAYING with the chicken
+  // still at lane 0), kick off the first advance automatically so pressing
+  // PLAY ROUND walks the chicken onto lane 1 without a second click.
+  useEffect(() => {
+    if (gameState === GameStatus.PLAYING && player.lane === 0) {
+      handleMove();
+    }
+  }, [gameState, player.lane]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     dragStartXRef.current = e.clientX;
@@ -386,7 +414,7 @@ export default function App() {
     if (Math.abs(dx) > 5) dragMovedRef.current = true;
     if (!containerRef.current) return;
     const w = containerRef.current.clientWidth;
-    const { min, max } = scrollBounds(LANES_COUNT);
+    const { min, max } = scrollBounds(getLanesCount(difficulty));
     setScrollX(clamp(dragStartScrollRef.current + (dx / w) * 100, min, max));
   };
 
@@ -415,7 +443,7 @@ export default function App() {
         stats={sessionStats}
         difficulty={difficulty}
         currentBet={bet}
-        onReset={() => setSessionStats(emptyStats(LANES_COUNT))}
+        onReset={() => setSessionStats(emptyStats(MAX_LANES))}
         onSimulate={(rounds) => {
           const sim = simulateMixedStrategy(difficulty, rounds, bet);
           setSessionStats((prev) => mergeStats(prev, sim));
@@ -435,7 +463,7 @@ export default function App() {
             player={player}
             cars={cars}
             isGameOver={isGameOver}
-            lanes={LANES_COUNT}
+            lanes={getLanesCount(difficulty)}
             barriers={barriers}
             difficulty={difficulty}
             moveDelay={moveDelay}
@@ -498,6 +526,7 @@ export default function App() {
           onPlay={onPlay}
           onCashout={onCashout}
           gameState={gameState}
+          isDying={isDying}
           currentMultiplier={player.multiplier}
         />
       </main>

@@ -18,6 +18,7 @@ interface ControlsProps {
   onPlay: () => void;
   onCashout: () => void;
   gameState: 'IDLE' | 'PLAYING' | 'GAMEOVER' | 'WON';
+  isDying: boolean;
   currentMultiplier: number;
 }
 
@@ -52,6 +53,7 @@ export default function Controls({
   onPlay,
   onCashout,
   gameState,
+  isDying,
   currentMultiplier,
 }: ControlsProps) {
   const isPlaying = gameState === 'PLAYING';
@@ -196,8 +198,13 @@ export default function Controls({
             </div>
           </div>
 
-          {/* Action button */}
-          {isPlaying ? (
+          {/* Action button. Hidden during the brief death animation so the
+              cashout/play button doesn't flicker between PLAYING and GAMEOVER. */}
+          {isDying ? (
+            <div className="w-full md:w-64 h-20 flex items-center justify-center rounded-2xl bg-red-950/40 border border-red-900/50 text-red-400/70 text-sm font-black uppercase tracking-[0.3em]">
+              Wrecking…
+            </div>
+          ) : isPlaying ? (
             <button
               onClick={onCashout}
               disabled={!isPlaying}
@@ -209,7 +216,7 @@ export default function Controls({
           ) : (
             <button
               onClick={onPlay}
-              disabled={isPlaying}
+              disabled={gameState === 'GAMEOVER' || gameState === 'WON'}
               className="w-full md:w-64 h-20 bg-[#38D361] hover:bg-[#45E872] disabled:bg-[#38D361]/50 disabled:cursor-not-allowed text-black font-black text-2xl rounded-2xl transition-all active:scale-95 shadow-[0_0_30px_rgba(56,211,97,0.3)] voxel-shadow tracking-tighter disabled:shadow-none"
             >
               PLAY ROUND
